@@ -28,17 +28,6 @@ sample video on YouTube -https://youtu.be/t-owFwsRWTI
 |   |   |-- alert.wav #audio alert 
 |   |   `-- labels.txt  # label file
 |   `-- src/ # source code directory
-|-- Car_ahead_departure_detection_video/ # Car ahead departure detection application on video file
-|   |-- Makefile
-|   |-- etc/ # address map and pre/post process configuration of tiny yolov3
-|   |-- examples/
-|   |-- exe/
-|   |   |-- car_ahead_departure_detection_video_app # the executable
-|   |   |-- tinyyolov3_bmp # DRP-AI files of yolov3
-|   |   |-- car2.mp4 #video file for inferencing
-|   |   |-- alert.wav #audio alert 
-|   |   `-- labels.txt  # label file
-|   `-- src/ # source code directory
 `-- README.md
 ```
 ###  Deep learning model details
@@ -62,10 +51,7 @@ make
 cd RZV2L_AiLibrary/13_Car_ahead_departure_detection/Car_ahead_departure_detection_usbcam
 make
 ~~~
-- Video
-~~~ 
-cd RZV2L_AiLibrary/13_Car_ahead_departure_detection/Car_ahead_departure_detection_video
-make
+
 ~~~
 
 ## Running the application
@@ -73,7 +59,7 @@ The generated executable file from laptop needs to be transfered on the RZv2L bo
 
 ### Syntax
 **./<application_name> <audio_interface>**
-1. Applicaiton name :- car_ahead_departure_detection_<cam/usbcam/video>_app
+1. Applicaiton name :- car_ahead_departure_detection_<cam/usbcam>_app
 2. Audio Interface:- 0/1 (0 for audio jack/ 1 for HDMI) (int dtype)
 
 ### Sample commands
@@ -87,15 +73,10 @@ cd 13_Car_ahead_departure_detection/Car_ahead_departure_detection_cam/exe/
 - USB Cam
 ~~~ 
 cd /home/root/RZV2L_AiLibrary 
-cd 13_Car_ahead_departure_detection/Car_ahead_departure_detection_video/exe/
+cd 13_Car_ahead_departure_detection/Car_ahead_departure_detection_usbcam/exe/
 ./car_ahead_departure_detection_usbcam_app 0
 ~~~
-- Video
-~~~ 
-cd /home/root/RZV2L_AiLibrary 
-cd 13_Car_ahead_departure_detection/Car_ahead_departure_detection_usbcam/exe/
-./car_ahead_departure_detection_video_app 0
-~~~
+
  
  ## Limitations
 - This is a simple sample tutorial application. It is provided for an user to experiment with an object detection model with a very basic tracker algorithm. 
