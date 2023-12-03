@@ -51,7 +51,6 @@ static pthread_t hdmi_thread;
 /*Flags*/
 static std::atomic<uint8_t> inference_start (0);
 static std::atomic<uint8_t> img_obj_ready   (0);
-
 /*Global Variables*/
 static float drpai_output_buf[INF_OUT_SIZE];
 static float drpai_output_buf0[INF_OUT_SIZE_TINYYOLOV2];
@@ -60,6 +59,9 @@ static uint64_t udmabuf_address = 0;
 static Image img;
 uint8_t yawn_flag=0;
 uint8_t blink_flag=0;
+bool readyFlag = false;
+bool timerRunning = false;
+std::chrono::high_resolution_clock::time_point startTime;
 
 /*AI Inference for DRPAI*/
 static std::string prefix;
@@ -844,9 +846,80 @@ static void draw_skeleton(void)
     }
     return;
 }
+/*****************************************
+* Function Name : ready_get
+* Description	: gets ready flag
+* Arguments	: -
+* Return value	: true if set
+* 		  false if not set
+******************************************/
+bool ready_get()
+{
+	return readyFlag;
+}
 
+/*****************************************
+* Function Name : ready_set
+* Description	: sets ready flag
+* Arguments	: bool val sets flag to the 
+* 		  passed cvalue
+* Return value	: 0 if succeeded
+*		not 0 otherwise
+******************************************/
+uint8_t ready_set(bool val)
+{
+	readyFlag = val;
+	return 0;
+}
 
+/*****************************************
+* Function Name : timer_start
+* Description	: starts the timer
+* Arguments	: -
+* Return value	: 0 if succeeded
+*		not 0 otherwise
+******************************************/
+uint8_t timer_start()
+{
+    timerRunning = true;
+    startTime = std::chrono::high_resolution_clock::now();
+    return 0;
+}
 
+/*****************************************
+* Function Name : timer_stop
+* Description	: stops the timer
+* Arguments	: -
+* Return value	: long dtimer duration in ms
+*                 0 if timer wasn't running
+******************************************/
+long timer_stop()
+{
+    if (timerRunning) {
+        timerRunning = false;
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        long duration = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count();
+        return duration;
+    }
+    return 0;  // Timer not running, return 0 ms (should never get here!)
+}
+
+/*****************************************
+ * Function Name : timer_get
+ * Description   : retrieves the current runtime of the timer in ms
+ * Arguments     : -
+ * Return value  : current runtime of timer
+ *                 0 if no timer running
+/*****************************************/
+long timer_get()
+{
+    if (timerRunning) {
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        long duration = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count();
+        return duration;
+    }
+    return 0;  // Timer not running, return 0 ms
+}
 /*****************************************
 * Function Name : print_result
 * Description   : print the result on display.
@@ -866,6 +939,7 @@ static int8_t print_result(Image* img)
     std::string str4 = "";
     uint32_t ai_inf_prev = 0;
     uint32_t yolotime_prev = 0;
+    static bool YawnCap = false;
     /* Draw Total Inference Time Result on RGB image.*/
     if (ai_inf_prev != (uint32_t) total_time)
     {
@@ -885,20 +959,33 @@ static int8_t print_result(Image* img)
                  stream << "Yawn Detected";
                  str3 = stream.str();
                  img->write_string_rgb(str3, TEXT_WIDTH_OFFSET, LINE_HEIGHT*4, CHAR_SCALE_SMALL, WHITE_DATA);
-            }      
-        if(blink_flag==2){
-                 stream.str("");
-                 stream << "Blink Detected";
-                 str4 = stream.str();
-                 img->write_string_rgb(str4, TEXT_WIDTH_OFFSET, LINE_HEIGHT*5, CHAR_SCALE_SMALL, WHITE_DATA);
-            }
-        for(i=0; i<face_count; i++) 
-        {
-            stream.str("");
-            stream << "Head Pose " << i+1 << ": " << std::setw(3) << random_forest_preds[i];
-            str0 = stream.str();
-            img->write_string_rgb(str0, TEXT_WIDTH_OFFSET, LINE_HEIGHT*(2+i), CHAR_SCALE_SMALL, WHITE_DATA);
-        }
+		 // Remember that a yawn has been captured
+		 YawnCap = true;
+	    } else {
+		// yawn inactive now, check if yawn was captured last time
+		if (YawnCap) {
+		    // set ready flag and reset yawn flag
+		    ready_set(true);
+		    YawnCap = false;
+		}
+	    }
+	if(blink_flag==2){
+                 if (timerRunning) {
+	             timer_stop();
+		     ready_set(false);
+                 }
+		 stream.str("");
+		 stream << "Blink Detected";
+		 str4 = stream.str();
+		 img->write_string_rgb(str4, TEXT_WIDTH_OFFSET, LINE_HEIGHT*5, CHAR_SCALE_SMALL, WHITE_DATA);
+	    }
+	for(i=0; i<face_count; i++) 
+	{
+	    stream.str("");
+	    stream << "Head Pose " << i+1 << ": " << std::setw(3) << random_forest_preds[i];
+	    str0 = stream.str();
+	    img->write_string_rgb(str0, TEXT_WIDTH_OFFSET, LINE_HEIGHT*(2+i), CHAR_SCALE_SMALL, WHITE_DATA);
+	}
     }
 
     return 0;
