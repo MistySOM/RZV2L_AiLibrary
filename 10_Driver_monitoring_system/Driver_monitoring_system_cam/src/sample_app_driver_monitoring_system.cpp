@@ -1627,7 +1627,16 @@ int32_t main(int32_t argc, char * argv[])
         exit(EXIT_FAILURE);
     }
     // Filling server information
-    inet_aton(serverIP, &servaddr.sin_addr);
+    if (argc > 1) {
+        std::cout << "Sending datagrams to " << argv[1] << std::endl;
+        inet_aton(argv[1], &servaddr.sin_addr);
+    }
+    else
+    {
+        perror("Need at least one argument to specify the IP.");
+        return -1;
+    }
+
 
 
     /* Obtain udmabuf memory area starting address */
