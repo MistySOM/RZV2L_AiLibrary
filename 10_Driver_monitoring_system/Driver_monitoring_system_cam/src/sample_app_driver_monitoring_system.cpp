@@ -33,8 +33,6 @@
 #include "camera.h"
 /*Image control*/
 #include "image.h"
-/*Wayland control*/
-#include "wayland.h"
 /*TinyYOLOv2 Post-Processing*/
 #include "box.h"
 
@@ -90,8 +88,6 @@ static uint32_t face_count_local = 0; /*To be used only in Inference Threads*/
 static uint32_t face_count = 0;
 static std::vector<detection> det_res;
 static std::vector<detection> det_face;
-
-static Wayland wayland;
 
 /*ML model inferencing*/
 static cv::Ptr<cv::ml::RTrees> tree = cv::ml::RTrees::create();
@@ -885,12 +881,14 @@ static int8_t print_result(Image* img)
                  stream << "Yawn Detected";
                  str3 = stream.str();
                  img->write_string_rgb(str3, TEXT_WIDTH_OFFSET, LINE_HEIGHT*4, CHAR_SCALE_SMALL, WHITE_DATA);
+                 std::cout << "\t" << str3 << std::endl;
             }      
         if(blink_flag==2){
                  stream.str("");
                  stream << "Blink Detected";
                  str4 = stream.str();
                  img->write_string_rgb(str4, TEXT_WIDTH_OFFSET, LINE_HEIGHT*5, CHAR_SCALE_SMALL, WHITE_DATA);
+                  std::cout << "\t" << str4 << std::endl;
             }
         for(i=0; i<face_count; i++) 
         {
@@ -1459,11 +1457,6 @@ void *R_Display_Thread(void *threadid)
             img.flip();
             /*displays AI Inference Results on display.*/
             print_result(&img);
-
-            /*Update Wayland*/
-            img_buf_id = img.get_buf_id();
-            wayland.commit(img_buf_id);
-            img_obj_ready.store(0);
         }
         usleep(WAIT_TIME); //wait 1 tick time
     } /*End Of Loop*/
@@ -1717,15 +1710,6 @@ int32_t main(int32_t argc, char * argv[])
         goto end_close_camera;
     }
 
-    /* Initialize waylad */
-    ret = wayland.init(img.udmabuf_fd, IMAGE_OUTPUT_WIDTH, IMAGE_OUTPUT_HEIGHT, IMAGE_CHANNEL_BGRA);
-    if(0 != ret)
-    {
-        fprintf(stderr, "[ERROR] Failed to initialize Image for Wayland\n");
-        ret_main = -1;
-        goto end_close_camera;
-    }
-
     /*Termination Request Semaphore Initialization*/
     /*Initialized value at 1.*/
     sem_create = sem_init(&terminate_req_sem, 0, 1);
@@ -1829,8 +1813,6 @@ end_threads:
         sem_destroy(&terminate_req_sem);
     }
 
-    /* Exit waylad */
-    wayland.exit();
     goto end_close_camera;
 
 end_close_camera:
