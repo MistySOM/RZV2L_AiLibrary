@@ -27,6 +27,9 @@
 ******************************************/
 /*DRPAI Driver Header*/
 #include <linux/drpai.h>
+#include <bits/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 /*Definition of Macros & other variables*/
 #include "define.h"
 /*MIPI camera control*/
@@ -93,6 +96,10 @@ static std::vector<detection> det_face;
 static cv::Ptr<cv::ml::RTrees> tree = cv::ml::RTrees::create();
 static cv::Ptr<cv::ml::RTrees> dtree = tree->load(ML_DESC_NAME);
 static std::string random_forest_preds[NUM_MAX_FACE];
+
+static int sockfd;
+static sockaddr_in servaddr{AF_INET, htons(8080)};
+#define serverIP "192.168.100.133"
 
 /*****************************************
 * Function Name : timedifference_msec
@@ -873,6 +880,7 @@ static int8_t print_result(Image* img)
     img->write_string_rgb(str0, TEXT_WIDTH_OFFSET, LINE_HEIGHT, CHAR_SCALE_SMALL, WHITE_DATA);
     // img->write_string_rgb(str1, TEXT_WIDTH_OFFSET, LINE_HEIGHT*2, CHAR_SCALE_SMALL, WHITE_DATA);
 
+    std::string datagram;
     if( face_count > 0 )
     {
 
@@ -897,7 +905,14 @@ static int8_t print_result(Image* img)
             str0 = stream.str();
             img->write_string_rgb(str0, TEXT_WIDTH_OFFSET, LINE_HEIGHT*(2+i), CHAR_SCALE_SMALL, WHITE_DATA);
         }
+
+        datagram = random_forest_preds[i][0] + std::string(yawn_flag == 2? "Y": "y") + std::string(blink_flag == 2? "B": "b");
     }
+    else
+        datagram = "-";
+
+    sendto(sockfd, datagram.c_str(), datagram.size(), MSG_CONFIRM,
+           (const struct sockaddr *) &servaddr, sizeof(servaddr));
 
     return 0;
 }
@@ -1605,6 +1620,15 @@ int32_t main(int32_t argc, char * argv[])
     int32_t create_thread_hdmi = -1;
     int32_t sem_create = -1;
     Camera* capture = NULL;
+
+    // Creating socket file descriptor
+    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+        perror("socket creation failed");
+        exit(EXIT_FAILURE);
+    }
+    // Filling server information
+    inet_aton(serverIP, &servaddr.sin_addr);
+
 
     /* Obtain udmabuf memory area starting address */
     int8_t fd = 0;
