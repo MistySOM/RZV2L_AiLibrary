@@ -27,7 +27,7 @@
 ******************************************/
 /*DRPAI Driver Header*/
 #include <linux/drpai.h>
-#include <bits/socket.h>
+#include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 /*Definition of Macros & other variables*/
